@@ -11,6 +11,7 @@ export class UserService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}
+
   async create(createUserDto: CreateUserDto) {
     try {
       const hashedPassword = await hashPassword(createUserDto.password);
@@ -22,6 +23,11 @@ export class UserService {
         message: 'User created successfully',
       };
     } catch (error) {
+      if (error.code === '23505') {
+        // Handle unique constraint violation
+        throw new HttpException('Email already exists', 400);
+      }
+      // Handle other errors
       throw new Error(error);
     }
   }
@@ -32,6 +38,12 @@ export class UserService {
 
   async findMultiUsersById(Ids: number[]): Promise<User[]> {
     return await this.userRepository.findBy(Ids.map((id) => ({ id })));
+  }
+
+  async findUserByEmail(email: string): Promise<User | null> {
+    return await this.userRepository.findOne({
+      where: { email },
+    });
   }
 
   async findOne(id: number) {
